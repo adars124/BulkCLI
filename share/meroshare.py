@@ -167,6 +167,24 @@ class MeroShare:
             if r.status_code == 200:
                 return r.json()
     
+    def select_bank(self, token: str, bankId: str) -> dict:
+        if token is None:
+            print('Invalid Token! User Not Authenticated.')
+            return
+        else:
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            }
+
+            url = f'{URL}/meroShare/bank/{bankId}'
+
+            res = req.get(url=url, headers=headers)
+
+            if res.status_code == 200:
+                return res.json()
+    
     # For applying IPO
     def apply_ipo(self, data) ->  dict:
         url = f'{URL}/meroShare/applicantForm/share/apply/'
@@ -195,27 +213,62 @@ class MeroShare:
             
             bankDetails = self.bank_details(token=token, bankCode=clientBoid['bankCode'])
             
-            customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
-            
-            data = {
-                "accountBranchId": bankDetails['branch']['id'],
-                "accountNumber": bankDetails['accountNumber'],
-                "appliedKitta": kitta,
-                "bankId": bankDetails['bank']['id'],
-                "boid": personalDetails['boid'],
-                "companyShareId": companyShareId,
-                "crnNumber": user.crn,
-                "customerId": customerCode,
-                "demat": clientBoid['boid'],
-                "transactionPIN": user.pin,
-                "token": token
-            }
-            
-            apply = self.apply_ipo(data=data)
-            
-            if apply:
-                return apply
+            if bankDetails is None:
+                url = f'{URL}/meroShare/bank/'
+
+                headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                }
+
+                res = req.get(url=url, headers=headers)
+
+                if res.status_code == 200:
+                    resp = res.json()
+                    
+                    bank = self.select_bank(token, resp[0]['id'])
+                    
+                    data = {
+                        "accountBranchId": bank['accountBranchId'],
+                        "accountNumber": bank['accountNumber'],
+                        "appliedKitta": kitta,
+                        "bankId": bank['bankId'],
+                        "boid": personalDetails['boid'],
+                        "companyShareId": companyShareId,
+                        "crnNumber": user.crn,
+                        "customerId": bank['id'],
+                        "demat": clientBoid['boid'],
+                        "transactionPIN": user.pin,
+                        "token": token
+                    }
+                    
+                    apply = self.apply_ipo(data=data)
+                    
+                    if apply:
+                        return apply
             else:
-                print('Some error occured!')
-                return
+                customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
+                
+                data = {
+                    "accountBranchId": bankDetails['branch']['id'],
+                    "accountNumber": bankDetails['accountNumber'],
+                    "appliedKitta": kitta,
+                    "bankId": bankDetails['bank']['id'],
+                    "boid": personalDetails['boid'],
+                    "companyShareId": companyShareId,
+                    "crnNumber": user.crn,
+                    "customerId": customerCode,
+                    "demat": clientBoid['boid'],
+                    "transactionPIN": user.pin,
+                    "token": token
+                }
+                
+                apply = self.apply_ipo(data=data)
+                
+                if apply:
+                    return apply
+                else:
+                    print('Some error occured!')
+                    return
                    

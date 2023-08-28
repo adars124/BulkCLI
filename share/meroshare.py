@@ -179,7 +179,7 @@ class MeroShare:
         
         r = req.post(url=url, json=data, headers=headers)
         
-        if r.status_code == 200 or r.status_code == 201:
+        if r.status_code == 200 or r.status_code == 201 or r.status_code == 409:
             return r.json()
         else:
             return

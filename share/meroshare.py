@@ -13,6 +13,7 @@ class User:
 class MeroShare:
     def __init__(self, user: User):
         self.user = user
+
     # Login user
     def user_login(self) -> str:
         headers = {
@@ -27,6 +28,7 @@ class MeroShare:
         }
         
         url = f'{URL}/meroShare/auth/'
+        
         r = req.post(url=url, json=client_data, headers=headers)
         
         if r.status_code == 200:
@@ -212,6 +214,23 @@ class MeroShare:
             clientBoid = self.client_boid_details(token=token, demat=personalDetails['demat'])
             
             bankDetails = self.bank_details(token=token, bankCode=clientBoid['bankCode'])
+
+            applicableIPO = self.applicable_ipos(token=token)['object']
+            
+            shareCriteriaId = ''
+            
+            if applicableIPO[0]['shareTypeName'] == 'RESERVED':
+                
+                url = f'{URL}/shareCriteria/boid/{personalDetails["demat"]}/{applicableIPO[0]["companyShareId"]}'
+                
+                res = req.get(url=url, headers={
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                })
+                
+                if res.status_code == 200:
+                    shareCriteriaId = res.json()['id']
             
             if bankDetails is None:
                 url = f'{URL}/meroShare/bank/'
@@ -233,6 +252,7 @@ class MeroShare:
                         "accountBranchId": bank['accountBranchId'],
                         "accountNumber": bank['accountNumber'],
                         "appliedKitta": kitta,
+                        "shareCriteriaId": shareCriteriaId,
                         "bankId": bank['bankId'],
                         "boid": personalDetails['boid'],
                         "companyShareId": companyShareId,
@@ -255,6 +275,7 @@ class MeroShare:
                     "accountNumber": bankDetails['accountNumber'],
                     "appliedKitta": kitta,
                     "bankId": bankDetails['bank']['id'],
+                    "shareCriteriaId": shareCriteriaId,
                     "boid": personalDetails['boid'],
                     "companyShareId": companyShareId,
                     "crnNumber": user.crn,

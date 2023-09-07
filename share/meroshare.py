@@ -248,20 +248,37 @@ class MeroShare:
                     
                     bank = self.select_bank(token, resp[0]['id'])
                     
-                    data = {
-                        "accountBranchId": bank['accountBranchId'],
-                        "accountNumber": bank['accountNumber'],
-                        "appliedKitta": kitta,
-                        "shareCriteriaId": shareCriteriaId,
-                        "bankId": bank['bankId'],
-                        "boid": personalDetails['boid'],
-                        "companyShareId": companyShareId,
-                        "crnNumber": user.crn,
-                        "customerId": bank['id'],
-                        "demat": clientBoid['boid'],
-                        "transactionPIN": user.pin,
-                        "token": token
-                    }
+                    if shareCriteriaId != '':
+                    
+                        data = {
+                            "accountBranchId": bank['accountBranchId'],
+                            "accountNumber": bank['accountNumber'],
+                            "appliedKitta": kitta,
+                            "shareCriteriaId": shareCriteriaId,
+                            "bankId": bank['bankId'],
+                            "boid": personalDetails['boid'],
+                            "companyShareId": companyShareId,
+                            "crnNumber": user.crn,
+                            "customerId": bank['id'],
+                            "demat": clientBoid['boid'],
+                            "transactionPIN": user.pin,
+                            "token": token
+                        }
+                    else:
+                        
+                        data = {
+                            "accountBranchId": bank['accountBranchId'],
+                            "accountNumber": bank['accountNumber'],
+                            "appliedKitta": kitta,
+                            "bankId": bank['bankId'],
+                            "boid": personalDetails['boid'],
+                            "companyShareId": companyShareId,
+                            "crnNumber": user.crn,
+                            "customerId": bank['id'],
+                            "demat": clientBoid['boid'],
+                            "transactionPIN": user.pin,
+                            "token": token
+                        }
                     
                     apply = self.apply_ipo(data=data)
                     
@@ -270,21 +287,39 @@ class MeroShare:
             else:
                 customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
                 
-                data = {
-                    "accountBranchId": bankDetails['branch']['id'],
-                    "accountNumber": bankDetails['accountNumber'],
-                    "appliedKitta": kitta,
-                    "bankId": bankDetails['bank']['id'],
-                    "shareCriteriaId": shareCriteriaId,
-                    "boid": personalDetails['boid'],
-                    "companyShareId": companyShareId,
-                    "crnNumber": user.crn,
-                    "customerId": customerCode,
-                    "demat": clientBoid['boid'],
-                    "transactionPIN": user.pin,
-                    "token": token
-                }
-                
+                if shareCriteriaId != '':
+                    
+                    data = {
+                        "accountBranchId": bankDetails['branch']['id'],
+                        "accountNumber": bankDetails['accountNumber'],
+                        "appliedKitta": kitta,
+                        "bankId": bankDetails['bank']['id'],
+                        # "shareCriteriaId": shareCriteriaId,
+                        "boid": personalDetails['boid'],
+                        "companyShareId": companyShareId,
+                        "crnNumber": user.crn,
+                        "customerId": customerCode,
+                        "demat": clientBoid['boid'],
+                        "transactionPIN": user.pin,
+                        "token": token
+                    }
+                else:
+
+                    data = {
+                        "accountBranchId": bankDetails['branch']['id'],
+                        "accountNumber": bankDetails['accountNumber'],
+                        "appliedKitta": kitta,
+                        "bankId": bankDetails['bank']['id'],
+                        # "shareCriteriaId": shareCriteriaId,
+                        "boid": personalDetails['boid'],
+                        "companyShareId": companyShareId,
+                        "crnNumber": user.crn,
+                        "customerId": customerCode,
+                        "demat": clientBoid['boid'],
+                        "transactionPIN": user.pin,
+                        "token": token
+                    }
+                    
                 apply = self.apply_ipo(data=data)
                 
                 if apply:

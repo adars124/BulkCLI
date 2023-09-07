@@ -1,3 +1,6 @@
+import logging
+import requests
+
 def file_reader(file):
     '''Reads file and splits the information into a list.'''
     with open(file, 'r') as f:
@@ -11,3 +14,11 @@ def parse(file):
         users.append([clientId, username, password, crn, pin])
         
     return users
+
+def token_error():
+    logging.error('Token is invalid.')
+    return None
+
+def status_error(response):
+    logging.error(response['documentation'])
+    return None

@@ -1,5 +1,12 @@
 import requests as req
 
+from typing import Optional
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+from .utils import token_error, status_error
+
 URL = 'https://webbackend.cdsc.com.np/api'
     
 class User:
@@ -11,86 +18,89 @@ class User:
         self.pin = pin
         
 class MeroShare:
+    
     def __init__(self, user: User):
         self.user = user
 
     # Login user
-    def user_login(self) -> str:
+    def user_login(self) -> Optional[str]:
+        url = f'{URL}/meroShare/auth/'
+        
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
         
-        client_data: dict = {
+        payload: dict = {
             'clientId': self.user.clientId,
             'username': self.user.username,
             'password': self.user.password
         }
         
-        url = f'{URL}/meroShare/auth/'
-        
-        r = req.post(url=url, json=client_data, headers=headers)
+        r = req.post(url=url, json=payload, headers=headers)
         
         if r.status_code == 200:
             res = r.headers
-            token: str = res['Authorization'].strip()
+            token = res['Authorization'].strip()
             return token
         else:
-            res = r.json()['documentation']
-            print(res)
-            return
+            logging.error(r.json()['documentation'])
+            return None
 
     # Personal Details of the Client
-    def perosnal_details(self, token: str) -> dict:
+    def perosnal_details(self, token: str) -> Optional[dict]:
         if token is None:
-            print('Invalid Token! User Not Authenticated.')
-            return
+            token_error()
         else:
-            headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': token
-            }
-            
             url = f'{URL}/meroShare/ownDetail/'
             
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            }
+                        
             r = req.get(url=url, headers=headers)
             
             if r.status_code == 200:
                 return r.json()
+            else:
+                status_error(r.json())
 
     # BOID Details of the Client
-    def client_boid_details(self, token: str, demat: str) -> dict:
+    def client_boid_details(self, token: str, demat: str) -> Optional[dict]:
         if token is None:
-            print('Invalid Token! User Not Authenticated.')
-            return
+            token_error()
         else:
+            url = f'{URL}/meroShareView/myDetail/{demat}'
+            
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': token
             }
 
-            url = f'{URL}/meroShareView/myDetail/{demat}'
-            
             r = req.get(url=url, headers=headers)
             
             if r.status_code == 200:
                 return r.json()
+            else:
+                status_error(r.json())
 
     # Get details of the Applicable IPOs                
-    def applicable_ipos(self, token: str) -> dict:
+    def applicable_ipos(self, token: str) -> Optional[dict]:
         if token is None:
-            print('Invalid Token! User Not Authenticated.')
-            return
+            token_error()
         else:
+            url = f'{URL}/meroShare/companyShare/applicableIssue/'
+            
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': f'{token}'
+                'Authorization': token
             }
 
-            json_data = {
+            payload = {
                 'filterFieldParams': [
                     {
                         'key': 'companyIssue.companyISIN.script',
@@ -124,71 +134,75 @@ class MeroShare:
                     },
                 ],
             }       
-            
-            url = f'{URL}/meroShare/companyShare/applicableIssue/'
-            
-            r = req.post(url=url, json=json_data, headers=headers)
+                        
+            r = req.post(url=url, json=payload, headers=headers)
             
             if r.status_code == 200:
                 return r.json()
+            else:
+                status_error(r.json())
  
     # Bank details of the Client       
-    def bank_details(self, token: str, bankCode: str) -> dict:
+    def bank_details(self, token: str, bankCode: str) -> Optional[dict]:
         if token is None:
-            print('Invalid Token! User Not Authenticated.')
-            return
+            token_error()
         else:
+            url = f'{URL}/bankRequest/{bankCode}/'
+            
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': f'{token}'
+                'Authorization': token
             }
-
-            url = f'{URL}/bankRequest/{bankCode}/'
+            
             r = req.get(url=url, headers=headers)
 
             if r.status_code == 200:
                 return r.json()
+            else:
+                status_error(r.json())
     
     # Get the customer's code
-    def get_customer_code(self, token: str, bankId: str) -> dict:
+    def get_customer_code(self, token: str, bankId: str) -> Optional[dict]:
         if token is None:
-            print("Invalid Token! User Not Authenticated.")
-            return
+            token_error()
         else:
+            url = f'{URL}/meroShare/bank/{bankId}/'
+            
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': f'{token}'
+                'Authorization': token
             }
-            
-            url = f'{URL}/meroShare/bank/{bankId}/'
             
             r = req.get(url=url, headers=headers)
             
             if r.status_code == 200:
                 return r.json()
+            else:
+                status_error(r.json())
     
-    def select_bank(self, token: str, bankId: str) -> dict:
+    def select_bank(self, token: str, bankId: str) -> Optional[dict]:
         if token is None:
-            print('Invalid Token! User Not Authenticated.')
-            return
+            token_error()
         else:
+            url = f'{URL}/meroShare/bank/{bankId}'
+            
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': token
             }
 
-            url = f'{URL}/meroShare/bank/{bankId}'
-
             res = req.get(url=url, headers=headers)
 
             if res.status_code == 200:
                 return res.json()
+            else:
+                status_error(res.json())
     
     # For applying IPO
-    def apply_ipo(self, data) ->  dict:
+    def apply_ipo(self, data) ->  Optional[dict]:
         url = f'{URL}/meroShare/applicantForm/share/apply/'
         
         headers = {
@@ -202,10 +216,10 @@ class MeroShare:
         if r.status_code == 200 or r.status_code == 201 or r.status_code == 409:
             return r.json()
         else:
-            return
+            status_error(r.json())
      
     # In order to apply from multiple accounts 
-    def apply_share(self, user: User, kitta: str, companyShareId: int) -> dict:
+    def apply_share(self, user: User, kitta: str, companyShareId: int) -> Optional[dict]:
         if user:
             token = self.user_login()
             
@@ -219,18 +233,20 @@ class MeroShare:
             
             shareCriteriaId = ''
             
-            if applicableIPO[0]['shareTypeName'] == 'RESERVED':
+            for listed in applicableIPO:
+                if 'shareTypeName' in listed.keys():
+                    url = f'{URL}/shareCriteria/boid/{personalDetails["demat"]}/{listed["companyShareId"]}'
                 
-                url = f'{URL}/shareCriteria/boid/{personalDetails["demat"]}/{applicableIPO[0]["companyShareId"]}'
+                    res = req.get(url=url, headers={
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    })
+                    
+                    if res.status_code == 200:
+                        shareCriteriaId = res.json()['id']
                 
-                res = req.get(url=url, headers={
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': token
-                })
                 
-                if res.status_code == 200:
-                    shareCriteriaId = res.json()['id']
             
             if bankDetails is None:
                 url = f'{URL}/meroShare/bank/'
@@ -248,37 +264,22 @@ class MeroShare:
                     
                     bank = self.select_bank(token, resp[0]['id'])
                     
-                    if shareCriteriaId != '':
+                    data = {
+                        "accountBranchId": bank['accountBranchId'],
+                        "accountNumber": bank['accountNumber'],
+                        "appliedKitta": kitta,
+                        "bankId": bank['bankId'],
+                        "boid": personalDetails['boid'],
+                        "companyShareId": companyShareId,
+                        "crnNumber": user.crn,
+                        "customerId": bank['id'],
+                        "demat": clientBoid['boid'],
+                        "transactionPIN": user.pin,
+                        "token": token
+                    }
                     
-                        data = {
-                            "accountBranchId": bank['accountBranchId'],
-                            "accountNumber": bank['accountNumber'],
-                            "appliedKitta": kitta,
-                            "shareCriteriaId": shareCriteriaId,
-                            "bankId": bank['bankId'],
-                            "boid": personalDetails['boid'],
-                            "companyShareId": companyShareId,
-                            "crnNumber": user.crn,
-                            "customerId": bank['id'],
-                            "demat": clientBoid['boid'],
-                            "transactionPIN": user.pin,
-                            "token": token
-                        }
-                    else:
-                        
-                        data = {
-                            "accountBranchId": bank['accountBranchId'],
-                            "accountNumber": bank['accountNumber'],
-                            "appliedKitta": kitta,
-                            "bankId": bank['bankId'],
-                            "boid": personalDetails['boid'],
-                            "companyShareId": companyShareId,
-                            "crnNumber": user.crn,
-                            "customerId": bank['id'],
-                            "demat": clientBoid['boid'],
-                            "transactionPIN": user.pin,
-                            "token": token
-                        }
+                    if shareCriteriaId != '':
+                        data['shareCriteriaId'] = shareCriteriaId
                     
                     apply = self.apply_ipo(data=data)
                     
@@ -287,44 +288,25 @@ class MeroShare:
             else:
                 customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
                 
-                if shareCriteriaId != '':
-                    
-                    data = {
-                        "accountBranchId": bankDetails['branch']['id'],
-                        "accountNumber": bankDetails['accountNumber'],
-                        "appliedKitta": kitta,
-                        "bankId": bankDetails['bank']['id'],
-                        # "shareCriteriaId": shareCriteriaId,
-                        "boid": personalDetails['boid'],
-                        "companyShareId": companyShareId,
-                        "crnNumber": user.crn,
-                        "customerId": customerCode,
-                        "demat": clientBoid['boid'],
-                        "transactionPIN": user.pin,
-                        "token": token
-                    }
-                else:
+                data = {
+                    "accountBranchId": bankDetails['branch']['id'],
+                    "accountNumber": bankDetails['accountNumber'],
+                    "appliedKitta": kitta,
+                    "bankId": bankDetails['bank']['id'],
+                    "boid": personalDetails['boid'],
+                    "companyShareId": companyShareId,
+                    "crnNumber": user.crn,
+                    "customerId": customerCode,
+                    "demat": clientBoid['boid'],
+                    "transactionPIN": user.pin,
+                    "token": token
+                }
 
-                    data = {
-                        "accountBranchId": bankDetails['branch']['id'],
-                        "accountNumber": bankDetails['accountNumber'],
-                        "appliedKitta": kitta,
-                        "bankId": bankDetails['bank']['id'],
-                        # "shareCriteriaId": shareCriteriaId,
-                        "boid": personalDetails['boid'],
-                        "companyShareId": companyShareId,
-                        "crnNumber": user.crn,
-                        "customerId": customerCode,
-                        "demat": clientBoid['boid'],
-                        "transactionPIN": user.pin,
-                        "token": token
-                    }
+                if shareCriteriaId != '':
+                    data['shareCriteriaId'] = shareCriteriaId
                     
                 apply = self.apply_ipo(data=data)
                 
                 if apply:
                     return apply
-                else:
-                    print('Some error occured!')
-                    return
                    

@@ -223,90 +223,90 @@ class MeroShare:
         if user:
             token = self.user_login()
             
-            personalDetails = self.perosnal_details(token=token)
-            
-            clientBoid = self.client_boid_details(token=token, demat=personalDetails['demat'])
-            
-            bankDetails = self.bank_details(token=token, bankCode=clientBoid['bankCode'])
-
-            applicableIPO = self.applicable_ipos(token=token)['object']
-            
-            shareCriteriaId = ''
-            
-            for listed in applicableIPO:
-                if 'shareTypeName' in listed.keys():
-                    url = f'{URL}/shareCriteria/boid/{personalDetails["demat"]}/{listed["companyShareId"]}'
+            if token:
+                personalDetails = self.perosnal_details(token=token)
                 
-                    res = req.get(url=url, headers={
+                clientBoid = self.client_boid_details(token=token, demat=personalDetails['demat'])
+                
+                bankDetails = self.bank_details(token=token, bankCode=clientBoid['bankCode'])
+
+                applicableIPO = self.applicable_ipos(token=token)['object']
+                
+                shareCriteriaId = ''
+                
+                for listed in applicableIPO:
+                    if 'shareTypeName' in listed.keys():
+                        url = f'{URL}/shareCriteria/boid/{personalDetails["demat"]}/{listed["companyShareId"]}'
+                    
+                        res = req.get(url=url, headers={
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'Authorization': token
+                        })
+                        
+                        if res.status_code == 200:
+                            shareCriteriaId = res.json()['id']
+                        
+                             
+                if bankDetails is None:
+                    url = f'{URL}/meroShare/bank/'
+
+                    headers = {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'Authorization': token
-                    })
-                    
+                    }
+
+                    res = req.get(url=url, headers=headers)
+
                     if res.status_code == 200:
-                        shareCriteriaId = res.json()['id']
-                
-                
-            
-            if bankDetails is None:
-                url = f'{URL}/meroShare/bank/'
-
-                headers = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': token
-                }
-
-                res = req.get(url=url, headers=headers)
-
-                if res.status_code == 200:
-                    resp = res.json()
-                    
-                    bank = self.select_bank(token, resp[0]['id'])
+                        resp = res.json()
+                        
+                        bank = self.select_bank(token, resp[0]['id'])
+                        
+                        data = {
+                            "accountBranchId": bank['accountBranchId'],
+                            "accountNumber": bank['accountNumber'],
+                            "appliedKitta": kitta,
+                            "bankId": bank['bankId'],
+                            "boid": personalDetails['boid'],
+                            "companyShareId": companyShareId,
+                            "crnNumber": user.crn,
+                            "customerId": bank['id'],
+                            "demat": clientBoid['boid'],
+                            "transactionPIN": user.pin,
+                            "token": token
+                        }
+                        
+                        if shareCriteriaId != '':
+                            data['shareCriteriaId'] = shareCriteriaId
+                        
+                        apply = self.apply_ipo(data=data)
+                        
+                        if apply:
+                            return apply
+                else:
+                    customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
                     
                     data = {
-                        "accountBranchId": bank['accountBranchId'],
-                        "accountNumber": bank['accountNumber'],
+                        "accountBranchId": bankDetails['branch']['id'],
+                        "accountNumber": bankDetails['accountNumber'],
                         "appliedKitta": kitta,
-                        "bankId": bank['bankId'],
+                        "bankId": bankDetails['bank']['id'],
                         "boid": personalDetails['boid'],
                         "companyShareId": companyShareId,
                         "crnNumber": user.crn,
-                        "customerId": bank['id'],
+                        "customerId": customerCode,
                         "demat": clientBoid['boid'],
                         "transactionPIN": user.pin,
                         "token": token
                     }
-                    
+
                     if shareCriteriaId != '':
                         data['shareCriteriaId'] = shareCriteriaId
-                    
+                        
                     apply = self.apply_ipo(data=data)
                     
                     if apply:
                         return apply
-            else:
-                customerCode = self.get_customer_code(token=token, bankId=bankDetails['bank']['id'])['id']
-                
-                data = {
-                    "accountBranchId": bankDetails['branch']['id'],
-                    "accountNumber": bankDetails['accountNumber'],
-                    "appliedKitta": kitta,
-                    "bankId": bankDetails['bank']['id'],
-                    "boid": personalDetails['boid'],
-                    "companyShareId": companyShareId,
-                    "crnNumber": user.crn,
-                    "customerId": customerCode,
-                    "demat": clientBoid['boid'],
-                    "transactionPIN": user.pin,
-                    "token": token
-                }
-
-                if shareCriteriaId != '':
-                    data['shareCriteriaId'] = shareCriteriaId
-                    
-                apply = self.apply_ipo(data=data)
-                
-                if apply:
-                    return apply
                    

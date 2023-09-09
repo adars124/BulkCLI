@@ -65,9 +65,10 @@ try:
         
         try:
             apply = m.apply_share(user=user, kitta=kitta, companyShareId=companyShareId)
-            termcolor.cprint(apply['message'], 'yellow', attrs=['bold'])
+            if apply:
+                termcolor.cprint(apply['message'], 'yellow', attrs=['bold'])
         except Exception as e:
             termcolor.cprint(f'\nThere was a problem applying the shares from {personalDetails["name"]}. Please try again later!', 'red', attrs=['bold'])
-            print('Error: ', e)
+            logging.error(e)
 except Exception as e:
     logging.error('Internal server error: ', e)

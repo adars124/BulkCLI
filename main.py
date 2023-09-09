@@ -29,6 +29,9 @@ try:
             continue
         
         personalDetails = m.perosnal_details(token=token)
+        
+        if personalDetails is None:
+            continue
 
         ipos = m.applicable_ipos(token=token)
         

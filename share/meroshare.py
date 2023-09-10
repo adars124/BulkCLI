@@ -160,7 +160,8 @@ class MeroShare:
             if r.status_code == 200:
                 return r.json()
             else:
-                status_error(r.json())
+                logging.info(r.json()['message'])
+                return None
     
     # Get the customer's code
     def get_customer_code(self, token: str, bankId: str) -> Optional[dict]:

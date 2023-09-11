@@ -44,7 +44,7 @@ class MeroShare:
             token = res['Authorization'].strip()
             return token
         else:
-            logging.error(r.json()['documentation'])
+            logging.error(r.json()['message'])
             return None
 
     # Personal Details of the Client

@@ -49,6 +49,6 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-accounts.txt
+accounts.new.txt
 *.backup 
 ipo_results.json

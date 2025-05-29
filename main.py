@@ -1,74 +1,190 @@
-from share.meroshare import MeroShare, User
-from share.utils import file_reader, parse
+#!/usr/bin/env python3
+"""
+Main entry point for Bulk IPO Manager v2.0
+"""
 
-import termcolor
-from tabulate import tabulate
+import sys
+import json
+from pathlib import Path
 
-import logging
+# Add src to Python path
+src_path = Path(__file__).parent / "src"
+sys.path.insert(0, str(src_path))
 
-input_file = file_reader('accounts.txt')
+from src.utils.logger import setup_logging
+from src.services.account_service import AccountService
+from src.services.ipo_service import IPOService
+from src.services.application_service import ApplicationService
+from src.config.settings import get_settings
+from src.config.constants import UIConstants
 
-accounts = parse(input_file)
 
-companyShareId = ''
-kitta = ''
-try:
-    for account in accounts:
-        LEN = len(account)
-        clientId, username, password, crn, pin = [account[i] for i in range(LEN)]
-        
-        # Adding data to the User class
-        user = User(clientId=clientId, username=username, password=password, crn=crn, pin=pin)
+def display_results(result):
+    """Display application results"""
+    stats = result.get_statistics()
 
-        # Assigning the user to the MeroShare class
-        m = MeroShare(user=user)
-        
-        token = m.user_login()
-        
-        if token is None:
-            continue
-        
-        personalDetails = m.perosnal_details(token=token)
-        
-        if personalDetails is None:
-            continue
+    print(f"\n{UIConstants.INFO_EMOJI} Application Results Summary")
+    print("=" * 60)
+    print(f"📊 Total Accounts: {stats['total_accounts']}")
+    print(f"{UIConstants.SUCCESS_EMOJI} Successful: {stats['successful']}")
+    print(f"{UIConstants.FAILED_EMOJI} Failed: {stats['failed']}")
+    print(f"📈 Success Rate: {stats['success_rate']}%")
+    print(f"⏱️ Duration: {stats['duration_seconds']} seconds")
 
-        ipos = m.applicable_ipos(token=token)
-        
-        if ipos is None:
-            continue
-                
-        applicableIPO = ipos['object']
+    if stats["failed"] > 0:
+        print(f"\n{UIConstants.WARNING_EMOJI} Error Summary:")
+        for error_type, count in stats["error_summary"].items():
+            print(f"  • {error_type}: {count}")
 
-        if len(applicableIPO) != 0:
-            if companyShareId == '' or kitta == '':
-                termcolor.cprint("\nIPOs available for application:\n", 'green')
-                col_names = ['S.N.', 'Company Name', 'Share Type', 'Company ID']
+    # Save results to file
+    settings = get_settings()
+    with open(settings.results_path, "w") as f:
+        json.dump(result.to_dict(), f, indent=2)
 
-                data = []
-                
-                for i, company in enumerate(applicableIPO):
-                    data.append([i+1, company['companyName'], company['shareGroupName'], company['companyShareId']])
-                
-                termcolor.cprint(tabulate(data, headers=col_names, tablefmt="grid"), 'blue')
+    print(f"\n💾 Results saved to: {settings.results_path}")
 
-                index = int(input("\nWhich company would you like to apply for: "))
-                companyShareId = data[index - 1][3]
-                
-                kitta = str(input("\nEnter the no. of kittas: "))
-        else:
-            termcolor.cprint(f'\nNo new IPOs availabe for issue! for {personalDetails["name"]}\n', 'red', attrs=['bold'])
-            continue
-            
-        print("\n")
-        termcolor.cprint(f'Applying {kitta} units from: {personalDetails["name"]}\n', 'green', attrs=['bold'])
-        
+
+def main():
+    """Main application entry point"""
+    # Setup logging
+    setup_logging()
+
+    # Get settings
+    settings = get_settings()
+
+    print(f"\n{UIConstants.ROCKET_EMOJI} {settings.APP_NAME} v{settings.VERSION}")
+    print("=" * 60)
+
+    try:
+        # Initialize services
+        account_service = AccountService()
+        ipo_service = IPOService()
+        application_service = ApplicationService()
+
+        # Load accounts
+        print(f"\n{UIConstants.INFO_EMOJI} Loading accounts...")
+        accounts = account_service.load_accounts()
+
+        if not accounts:
+            print(
+                f"{UIConstants.ERROR_EMOJI} No accounts loaded. Please check accounts.txt"
+            )
+            return
+
+        print(f"{UIConstants.SUCCESS_EMOJI} Loaded {len(accounts)} accounts")
+
+        # Get available IPOs from first account
+        print(f"\n{UIConstants.INFO_EMOJI} Fetching available IPOs...")
+        sample_user = accounts[0]
+        available_ipos = ipo_service.get_available_ipos(sample_user)
+
+        if not available_ipos:
+            print(f"{UIConstants.ERROR_EMOJI} No IPOs available for application!")
+            return
+
+        # Display IPO menu
+        print(
+            f"\n{UIConstants.INFO_EMOJI} Available IPOs ({len(available_ipos)} found):"
+        )
+        print("-" * 60)
+
+        for i, ipo in enumerate(available_ipos, 1):
+            formatted_ipo = ipo_service.format_ipo_for_display(ipo)
+            print(f"{i:2d}. {formatted_ipo['name']}")
+            print(
+                f"    {UIConstants.INFO_EMOJI} Share Type: {formatted_ipo['share_type']}"
+            )
+            print(f"    🆔 Company ID: {formatted_ipo['id']}")
+            print(
+                f"    📊 Min/Max Units: {formatted_ipo['min_unit']}/{formatted_ipo['max_unit']}"
+            )
+            print()
+
+        # Get user selection
         try:
-            apply = m.apply_share(user=user, kitta=kitta, companyShareId=companyShareId)
-            if apply:
-                termcolor.cprint(apply['message'], 'yellow', attrs=['bold'])
-        except Exception as e:
-            termcolor.cprint(f'\nThere was a problem applying the shares from {personalDetails["name"]}. Please try again later!', 'red', attrs=['bold'])
-            logging.error(e)
-except Exception as e:
-    logging.error('Internal server error: ', e)
+            choice = int(input(f"🎯 Select IPO (1-{len(available_ipos)}): ")) - 1
+            if 0 <= choice < len(available_ipos):
+                selected_ipo = available_ipos[choice]
+                company_id = selected_ipo["companyShareId"]
+
+                print(
+                    f"\n{UIConstants.SUCCESS_EMOJI} Selected: {selected_ipo['companyName']}"
+                )
+
+                # Get kitta amount with validation
+                while True:
+                    try:
+                        kitta = int(input("💰 Enter number of kittas to apply: "))
+                        if ipo_service.validate_kitta_amount(selected_ipo, kitta):
+                            break
+                        else:
+                            print(
+                                f"{UIConstants.ERROR_EMOJI} Invalid kitta amount! Please try again."
+                            )
+                    except ValueError:
+                        print(f"{UIConstants.ERROR_EMOJI} Please enter a valid number!")
+
+                print(f"\n🎯 Ready to apply IPO for {len(accounts)} accounts")
+                print(
+                    f"{UIConstants.INFO_EMOJI} Company: {selected_ipo['companyName']}"
+                )
+                print(
+                    f"{UIConstants.INFO_EMOJI} Company ID: {company_id}, Kittas: {kitta}"
+                )
+                confirm = (
+                    input("🤔 Proceed with bulk application? (y/N): ").lower().strip()
+                )
+
+                if confirm == "y":
+                    # Process bulk applications
+                    result = application_service.process_bulk_applications(
+                        accounts, company_id, kitta
+                    )
+
+                    # Display results
+                    display_results(result)
+
+                    # Ask about retrying failed applications
+                    if result.failed > 0 and settings.AUTO_RETRY_FAILED:
+                        retry_confirm = (
+                            input(
+                                f"\n🔄 Retry {result.failed} failed applications? (y/N): "
+                            )
+                            .lower()
+                            .strip()
+                        )
+                        if retry_confirm == "y":
+                            print(
+                                f"\n{UIConstants.INFO_EMOJI} Waiting {settings.AUTO_RETRY_DELAY} seconds before retry..."
+                            )
+                            import time
+
+                            time.sleep(settings.AUTO_RETRY_DELAY)
+
+                            retry_result = (
+                                application_service.retry_failed_applications(result)
+                            )
+                            display_results(retry_result)
+
+                    print(
+                        f"\n{UIConstants.SUCCESS_EMOJI} Bulk IPO application completed!"
+                    )
+                else:
+                    print(f"{UIConstants.ERROR_EMOJI} Operation cancelled.")
+            else:
+                print(f"{UIConstants.ERROR_EMOJI} Invalid selection!")
+        except ValueError:
+            print(f"{UIConstants.ERROR_EMOJI} Invalid input!")
+        except KeyboardInterrupt:
+            print(f"\n{UIConstants.WARNING_EMOJI} Operation cancelled by user.")
+
+    except Exception as e:
+        print(f"{UIConstants.ERROR_EMOJI} An error occurred: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return
+
+
+if __name__ == "__main__":
+    main()

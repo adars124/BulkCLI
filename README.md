@@ -256,4 +256,4 @@ This tool is for educational and personal use only. Users are responsible for co
 
 ---
 
-**Built with ❤️ for the MeroShare community**
+**Built with ❤️ for the NEPSE community**

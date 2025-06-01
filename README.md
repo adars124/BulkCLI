@@ -5,6 +5,7 @@ A modern, robust bulk IPO application system for MeroShare built with clean arch
 ## 🚀 Features
 
 - **Bulk IPO Applications**: Apply for IPOs across multiple accounts simultaneously
+- **Capital Lookup Tool**: Easily find your broker/capital ID for account setup
 - **Concurrent Processing**: Configurable concurrent request handling with rate limiting
 - **Robust Error Handling**: Comprehensive error handling with retry mechanisms
 - **Clean Architecture**: SOLID principles, DRY code, and separation of concerns
@@ -253,6 +254,37 @@ This tool is for educational and personal use only. Users are responsible for co
 - Basic bulk IPO application functionality
 - Monolithic architecture
 - Limited error handling
+
+## 🔍 Finding Your Capital/Broker ID
+
+Before using the bulk IPO application, you need to find your capital/broker ID. We provide multiple ways to do this:
+
+### Method 1: Using the Main Application
+
+```bash
+python main.py
+```
+
+Then select option 2: "🔍 Find Capital/Broker ID"
+
+### Method 2: Using the Standalone Capital Finder
+
+```bash
+python capital_finder.py
+```
+
+### Search Examples:
+
+- Search by broker name: `NABIL`, `Kumari`, `Global IME`
+- Search by partial name: `NABIL` will find "NABIL BANK LIMITED"
+- Search by code: `10400` (if you know the 5-digit broker code)
+- Fuzzy search: Even with typos like `NABILL` or `Kumary`
+
+The tool will show you:
+
+- 🏢 **Full broker name**
+- 🆔 **ID number** (this is your `client_id` for accounts.txt)
+- 📋 **Broker code**
 
 ---
 
